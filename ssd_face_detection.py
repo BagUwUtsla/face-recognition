@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import time 
+import json 
 
 video_capture = cv2.VideoCapture(0) 
 detector = cv2.dnn.readNetFromCaffe("deploy.prototxt.txt", "res10_300x300_ssd_iter_140000.caffemodel") 
@@ -36,7 +37,7 @@ while(True):
 
     detections_df = detections_df[detections_df['is_face'] == 1] #0: background, 1: face
     detections_df = detections_df[detections_df['confidence'] >= 0.520]
-
+    donnees = {}
     for i, instance in detections_df.iterrows():
         
         confidence_score = str(round(100*instance["confidence"], 2))+" %"
@@ -50,10 +51,22 @@ while(True):
         
         if detected_face.shape[0] > 0 and detected_face.shape[1] > 0:
             
+            left = int(left*aspect_ratio_x)
+            top = int(top*aspect_ratio_y)
+            right = int(right*aspect_ratio_x)
+            bottom = int(bottom*aspect_ratio_y)
+
             #write the confidence score above the face
-            cv2.putText(base_frame, confidence_score, (int(left*aspect_ratio_x), int(top*aspect_ratio_y-10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.putText(base_frame, confidence_score, (left, top-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
             #draw rectangle to main image
-            cv2.rectangle(base_frame, (int(left*aspect_ratio_x), int(top*aspect_ratio_y)), (int(right*aspect_ratio_x), int(bottom*aspect_ratio_y)), (255, 255, 255), 1) 
+            cv2.rectangle(base_frame, (left, top), (right, bottom), (255, 255, 255), 1) 
+            
+            for variable in ["confidence_score", "left", "top", "right", "bottom"]:
+                donnees[variable] = eval(variable)
+    
+    # déplacement des données sur le JSON
+    with open("faces.json", "w") as file:
+        json.dump(donnees, file)
     
     cv2.imshow('Video', base_frame)
     # if you press 'q' it will exit the programm
